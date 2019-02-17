@@ -33,7 +33,7 @@ suite('Functional Tests', function() {
         });
       });
       
-      test('1 stock with like', function(done) {
+      test('1 stock with 1 like', function(done) {
         chai.request(server)
         .get('/api/stock-prices')
         .query({stock: 'goog', like: true})
@@ -59,13 +59,49 @@ suite('Functional Tests', function() {
   });
       
       test('2 stocks', function(done) {
-        
+        chai.request(server)
+        .get('/api/stock-prices')
+        .query({stock: 'goog',
+               stock: 'msft'})
+        .end(function(err, res){
+          assert.equal(res.status, 200);
+          assert.isObject(res.body, 'response should be an object');
+          assert.property(res.body, 'stockData');
+          assert.property(res.body.stockData[0], 'stock');
+          assert.property(res.body.stockData[0], 'price');
+          assert.property(res.body.stockData[0], 'rel_likes');
+          assert.property(res.body.stockData[1], 'stock');
+          assert.property(res.body.stockData[1], 'price');
+          assert.property(res.body.stockData[1], 'rel_likes');
+          assert.equal(res.body.stockData[0].stock, 'GOOG');
+          assert.equal(res.body.stockData[1].stock, 'MSFT');
+          done();
       });
-      
+  });   
       test('2 stocks with like', function(done) {
-        
+        chai.request(server)
+        .get('/api/stock-prices')
+        .query({stock: 'goog',
+               stock: 'msft',
+               like: true})
+        .end(function(err, res){
+          assert.equal(res.status, 200);
+          assert.isObject(res.body, 'response should be an object');
+          assert.property(res.body, 'stockData');
+          assert.property(res.body.stockData[0], 'stock');
+          assert.property(res.body.stockData[0], 'price');
+          assert.property(res.body.stockData[0], 'rel_likes');
+          assert.property(res.body.stockData[1], 'stock');
+          assert.property(res.body.stockData[1], 'price');
+          assert.property(res.body.stockData[1], 'rel_likes');
+          assert.equal(res.body.stockData[0].stock, 'GOOG');
+          assert.equal(res.body.stockData[0].rel_likes, 1);
+          assert.equal(res.body.stockData[1].rel_likes, -1);
+          assert.equal(res.body.stockData[1].stock, 'MSFT');
+          done();
       });
       
     });
 
+  });
 });

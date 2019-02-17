@@ -32,9 +32,20 @@ module.exports = function (app) {
     .get(function (req, res){
     
     var ipAddress = req.ip;
-    var stockName = req.query.stock.toLowerCase();
     var likeBool  = req.query.like;
     var count;
+    
+    if(req.query.stock[0] && req.query.stock[1]){
+      
+      console.log('two sent');
+      console.log(req.query.stock[0] + req.query.stock[1]);
+      var firstStock = req.query.stock[0].toLowerCase();
+      var secondStock = req.query.stock[1].toLowerCase();
+      
+    }
+    
+    
+    var stockName = req.query.stock.toLowerCase();
     
     var url = 'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol='+req.query.stock+'&apikey='+process.env.EXTERNAL_API_KEY;
     
@@ -47,12 +58,11 @@ module.exports = function (app) {
       var Promise1 = new Promise((resolve,reject) => {stockLike.countDocuments({stockName: stockName}, (err,data) => {
       if (err) return err.message; 
       count = data;
-      resolve (count);
+      resolve(count);
         
       Promise1.then(fetch(url)
       .then(res => res.json())
       .then(data => { 
-                         
       res.json({stockData: {
         stock:  data['Global Quote']['01. symbol'],
         price:  data['Global Quote']['05. price'],
@@ -61,8 +71,6 @@ module.exports = function (app) {
       })
       })         
       .catch(err => console.log(err)));
-        
-        
     })})});
     
     function LikeChecker(likeBool,stock,ip) {
@@ -80,6 +88,6 @@ module.exports = function (app) {
         }
       });
     }
-  } 
+  }      
 });
 }
