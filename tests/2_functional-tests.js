@@ -22,20 +22,41 @@ suite('Functional Tests', function() {
         .get('/api/stock-prices')
         .query({stock: 'goog'})
         .end(function(err, res){
-          
-          //complete this one too
-          
+          assert.equal(res.status, 200);
+          assert.isObject(res.body, 'response should be an object');
+          assert.property(res.body, 'stockData');
+          assert.property(res.body.stockData, 'stock');
+          assert.property(res.body.stockData, 'price');
+          assert.property(res.body.stockData, 'likes');
+          assert.equal(res.body.stockData.stock, 'GOOG');
           done();
         });
       });
       
       test('1 stock with like', function(done) {
-        
+        chai.request(server)
+        .get('/api/stock-prices')
+        .query({stock: 'goog', like: true})
+        .end(function(err, res){
+          assert.equal(res.status, 200);
+          assert.equal(res.body.stockData.stock, 'GOOG');
+          assert.equal(res.body.stockData.likes, 1);
+          done();
       });
+    });     
+        
       
       test('1 stock with like again (ensure likes arent double counted)', function(done) {
-        
+        chai.request(server)
+        .get('/api/stock-prices')
+        .query({stock: 'goog', like: true})
+        .end(function(err, res){
+          assert.equal(res.status, 200);
+          assert.equal(res.body.stockData.stock, 'GOOG');
+          assert.equal(res.body.stockData.likes, 1);
+          done();
       });
+  });
       
       test('2 stocks', function(done) {
         

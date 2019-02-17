@@ -8,8 +8,19 @@ var cors        = require('cors');
 var apiRoutes         = require('./routes/api.js');
 var fccTestingRoutes  = require('./routes/fcctesting.js');
 var runner            = require('./test-runner');
+var helmet            = require('helmet');
 
 var app = express();
+
+app.use(helmet.contentSecurityPolicy({
+  
+  directives: {
+  defaultSrc: ["'self'"],
+  scriptSrc: ["'self'"]
+  }
+
+}));
+
 
 app.use('/public', express.static(process.cwd() + '/public'));
 
