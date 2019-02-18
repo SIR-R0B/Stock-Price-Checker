@@ -35,14 +35,114 @@ module.exports = function (app) {
     var likeBool  = req.query.like;
     var count;
     
-    if(req.query.stock[0] && req.query.stock[1]){
+    function LikeChecker(stock) {
+    
+      stockLike.find({stockName: stock, ipAddress: ipAddress},(err,data) => {
+        
+        if(err) return err.message;
+        
+        if(!data[0]){
+      var addLike = new stockLike({stockName: stock, ipAddress: ipAddress});
+      addLike.save((err,data) => err ? err.message : console.log('Saved'));
+        }
+         return; //console.log('A like for ' + stock + ' has already been registered from ipAddress: ' + ip); 
+      });
+  }  
+    
+    if(Array.isArray(req.query.stock)){
       
-      console.log('two sent');
-      console.log(req.query.stock[0] + req.query.stock[1]);
       var firstStock = req.query.stock[0].toLowerCase();
       var secondStock = req.query.stock[1].toLowerCase();
+      var firstUrl = 'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol='+firstStock+'&apikey='+process.env.EXTERNAL_API_KEY;
+      var secondUrl = 'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol='+secondStock+'&apikey='+process.env.EXTERNAL_API_KEY;
       
-    }
+      var relLikesObj = {};
+  
+      if(likeBool) LikeChecker(firstStock)(secondStock);
+      
+      var Promise1 = new Promise((resolve,reject) => {stockLike.countDocuments({stockName: firstStock}, (err,data) => {
+      if (err) return err.message; 
+      resolve(data);
+      })});
+      
+      var Promise2 = new Promise((resolve,reject) => {stockLike.countDocuments({stockName: secondStock}, (err,data) => {
+      if (err) return err.message; 
+      resolve(data);
+      })});
+      
+      
+      Promise1.then((firstLikesCount) => {
+      
+      Promise2.then((secondLikesCount) => {
+      relLikesObj = Object.assign(relLikesObj,{first: firstLikesCount - secondLikesCount, second: secondLikesCount-firstLikesCount});
+      var Promise3 = new Promise((resolve,reject) => resolve(relLikesObj));
+        
+      Promise3.then((relLikes) => {
+      fetch(firstUrl)
+      .then(res => res.json())
+      .then(data => {
+     
+    var Promise4 = new Promise ((resolve,reject) => {
+        
+     resolve({ 
+        stock:  data['Global Quote']['01. symbol'],
+        price:  data['Global Quote']['05. price'],
+        rel_likes1:  relLikes.first,
+        rel_likes2:  relLikes.second
+      })
+      });
+        
+        
+        
+      Promise4.then((dataFirstStock) => {
+      
+        console.log(dataFirstStock);
+        
+        fetch(secondUrl)
+        .then(res => res.json())
+        .then(data => {
+        
+          res.json({stockData: [{},{}]});
+          
+        }
+      
+      ).catch(err => console.log(err));
+      
+      });
+      })
+      .catch(err => console.log(err));
+      })
+        
+        
+        
+      });
+      
+      
+      });
+      
+      
+        
+      /*
+        .then(() => {
+        console.log(JSON.stringify(firstStockObj));
+       fetch(secondUrl)
+      .then(res => res.json())
+      .then(data => { 
+      res.json({stockData: [{
+        stock:  firstStockObj.firstStock,
+        price:  firstStockObj.firstPrice,
+        rel_likes:  firstStockObj.firstLikes - firstStockObj.secondLikes
+      },{
+        stock:  data['Global Quote']['01. symbol'],
+        price:  data['Global Quote']['05. price'],
+        rel_likes:  firstStockObj.secondLikes - firstStockObj.firstLikes
+      }]
+      })
+      })         
+      .catch(err => console.log(err));
+      });
+      */
+    }else{
     
     
     var stockName = req.query.stock.toLowerCase();
@@ -50,7 +150,7 @@ module.exports = function (app) {
     var url = 'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol='+req.query.stock+'&apikey='+process.env.EXTERNAL_API_KEY;
     
     var Promise0 = new Promise((resolve,reject) => {
-        LikeChecker(likeBool,stockName,ipAddress);
+        if(likeBool) LikeChecker(stockName);
         resolve('success');
       });
     
@@ -71,23 +171,7 @@ module.exports = function (app) {
       })
       })         
       .catch(err => console.log(err)));
-    })})});
-    
-    function LikeChecker(likeBool,stock,ip) {
-    if(likeBool){
-    
-      stockLike.find({stockName: stock, ipAddress: ip},(err,data) => {
-        
-        if(err) return err.message;
-        
-        if(!data[0]){
-      var addLike = new stockLike({stockName: stock, ipAddress: ip});
-      addLike.save((err,data) => err ? err.message : console.log('Saved'));
-        }else{
-         return; //console.log('A like for ' + stock + ' has already been registered from ipAddress: ' + ip); 
-        }
-      });
+    })})});    
     }
-  }      
-});
+  });
 }
