@@ -102,7 +102,8 @@ module.exports = function (app) {
         .then(res => res.json())
         .then(data => {
         
-          res.json({stockData: [{},{}]});
+          res.json({stockData: [{stock: dataFirstStock.stock, price: dataFirstStock.price, rel_likes: dataFirstStock.rel_likes1},
+                                {stock: data['Global Quote']['01. symbol'], price: data['Global Quote']['05. price'], rel_likes: dataFirstStock.rel_likes2}]});
           
         }
       
@@ -112,37 +113,9 @@ module.exports = function (app) {
       })
       .catch(err => console.log(err));
       })
-        
-        
-        
-      });
-      
-      
-      });
-      
-      
-        
-      /*
-        .then(() => {
-        console.log(JSON.stringify(firstStockObj));
-       fetch(secondUrl)
-      .then(res => res.json())
-      .then(data => { 
-      res.json({stockData: [{
-        stock:  firstStockObj.firstStock,
-        price:  firstStockObj.firstPrice,
-        rel_likes:  firstStockObj.firstLikes - firstStockObj.secondLikes
-      },{
-        stock:  data['Global Quote']['01. symbol'],
-        price:  data['Global Quote']['05. price'],
-        rel_likes:  firstStockObj.secondLikes - firstStockObj.firstLikes
-      }]
-      })
-      })         
-      .catch(err => console.log(err));
-      });
-      */
-    }else{
+  });
+ });
+}else{
     
     
     var stockName = req.query.stock.toLowerCase();
