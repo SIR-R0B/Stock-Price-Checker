@@ -33,11 +33,9 @@ module.exports = function (app) {
     
     var ipAddress = req.ip;
     var likeBool  = req.query.like;
-    var count;
     
-  async function LikeAdder(stock) {
-      
-    let promise = new Promise((resolve,reject) => {
+  function LikeAdder(stock) {
+  
        stockLike.find({stockName: stock, ipAddress: ipAddress},(err,data) => {
         
         if(err) err.message;
@@ -45,31 +43,85 @@ module.exports = function (app) {
         if(!data[0]){
       var addLike = new stockLike({stockName: stock, ipAddress: ipAddress});
       addLike.save((err,saved) => {
-      if (err) err.message;
-        if(saved) resolve(true);
-        });
-       }else{
-      resolve(false);
-       } 
-      });
-    });
-    let result = await promise;
-    return result;
-  }  
-    
-    async function CountLikes(stock) {
-   
-  let promise = new Promise((resolve, reject) => {
-    stockLike.countDocuments({stockName: stock},(err,count) => {
-      if (err) reject(err.message);
-      console.log('count: '+count);
-      resolve(count);
-    });
+      if (err) return false;
+        
+        return true;
   });
-      
-      let result = await promise;
-      return result;
+        }
+       });
+  }
+  
+    
+ function CountLikes(stock,url) {
+    
+    if(likeBool) LikeAdder(stockName);
+    
+    stockLike.countDocuments({stockName: stock},(err,countLikes) => {
+      if (err) err.message;
+    
+      fetch(url)
+      .then(res => res.json())
+      .then(data => {  
+      res.json({stockData: {
+        stock:  data['Global Quote']['01. symbol'],
+        price:  data['Global Quote']['05. price'],
+        likes:  countLikes
+      }
+      })
+      })
+      .catch(err => err.message);
+      });          
+         
+     return;
+  
 }
+    
+    function HandleTwoUrl(obj,url1,url2){
+    
+    let firstCall = fetch(url1);
+    let secondCall = fetch(url2);
+      
+      Promise.all([firstCall,secondCall])
+      .then(values => Promise.all(values.map(res => res.json())))
+      .then((data) => {
+    
+          res.json({stockData: [{stock: data[0]['Global Quote']['01. symbol'], price: data[0]['Global Quote']['05. price'], rel_likes: obj.first-obj.second},
+                                {stock: data[1]['Global Quote']['01. symbol'], price: data[1]['Global Quote']['05. price'], rel_likes: obj.second-obj.first}]});  
+        }).catch(err => err.message);
+       
+  
+    }
+    
+    function AddTwoLikes(stock1,stock2){
+    
+      stockLike.find({stockName: stock1, ipAddress: ipAddress},(err,data) => {
+        
+        if(err) err.message;
+        
+        if(!data[0]){
+      var addLike = new stockLike({stockName: stock1, ipAddress: ipAddress});
+      addLike.save((err,saved) => {
+      if (err) console.log(err);
+      //if(saved) console.log('saved Like for: '+stock1);
+  });
+        }
+       });
+      
+      stockLike.find({stockName: stock2, ipAddress: ipAddress},(err,data) => {
+        
+        if(err) err.message;
+        
+        if(!data[0]){
+      var addLike = new stockLike({stockName: stock2, ipAddress: ipAddress});
+      addLike.save((err,saved) => {
+      if (err) console.log(err);
+        
+        //if(saved) console.log('saved Like for: '+stock2);
+  });
+        }
+       });
+    
+    }
     
     if(Array.isArray(req.query.stock)){
       
@@ -80,102 +132,27 @@ module.exports = function (app) {
       
       var relLikesObj = {};
   
-      if(likeBool) {
-      LikeAdder(firstStock);
-      LikeAdder(secondStock);
-      }
+      if(likeBool) AddTwoLikes(firstStock,secondStock);
       
-      var Promise1 = new Promise((resolve,reject) => {stockLike.countDocuments({stockName: firstStock}, (err,data) => {
-      if (err) reject(err.message); 
-      resolve(data);
-      })});
-      
-      var Promise2 = new Promise((resolve,reject) => {stockLike.countDocuments({stockName: secondStock}, (err,data) => {
-      if (err) reject(err.message); 
-      resolve(data);
-      })});
-      
-      
-      Promise1.then((firstLikesCount) => {
-      
-      Promise2.then((secondLikesCount) => {
-      relLikesObj = Object.assign(relLikesObj,{first: firstLikesCount - secondLikesCount, second: secondLikesCount-firstLikesCount});
-      var Promise3 = new Promise((resolve,reject) => resolve(relLikesObj));
-        
-      Promise3.then((relLikes) => {
-      fetch(firstUrl)
-      .then(res => res.json())
-      .then((err,data) => {
-     
-    var Promise4 = new Promise ((resolve,reject) => {
-     if (err) reject(err.message);
-     resolve({ 
-        stock:  data['Global Quote']['01. symbol'],
-        price:  data['Global Quote']['05. price'],
-        rel_likes1:  relLikes.first,
-        rel_likes2:  relLikes.second
-      })
+      stockLike.countDocuments({stockName: firstStock}, (err,countFirst) => {
+      if (err) console.log(err.message); 
+      relLikesObj = Object.assign(relLikesObj, {first: countFirst});
       });
-        
-        
-        
-      Promise4.then((dataFirstStock) => {
-        
-        fetch(secondUrl)
-        .then(res => res.json())
-        .then(data => {
-        
-          res.json({stockData: [{stock: dataFirstStock.stock, price: dataFirstStock.price, rel_likes: dataFirstStock.rel_likes1},
-                                {stock: data['Global Quote']['01. symbol'], price: data['Global Quote']['05. price'], rel_likes: dataFirstStock.rel_likes2}]});
-          
-        }
       
-      ).catch(err => err.message);
-      
+      stockLike.countDocuments({stockName: secondStock}, (err,countSecond) => {
+      if (err) console.log(err.message); 
+      relLikesObj = Object.assign(relLikesObj, {second: countSecond});
+      HandleTwoUrl(relLikesObj, firstUrl, secondUrl);
       });
-      })
-      .catch(err => err.message);
-      })
-  });
- });
+      
+        
 }else{
     
-    
     var stockName = req.query.stock.toLowerCase();
-    
     var url = 'https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol='+req.query.stock+'&apikey='+process.env.EXTERNAL_API_KEY;
-    
-    
-  var Promise0 = new Promise((resolve,reject) => {
-        if(likeBool) {
-        var result = LikeAdder(stockName);
-        resolve(result);
-        }
-        reject.promise;
-       
-      });
-    
-    var Promise1 = new Promise((resolve,reject) => {
-        var result = CountLikes(stockName);
-        resolve(result);
-      });
+     
+      CountLikes(stockName,url);
         
-      fetch(url)
-      .then(res => res.json())
-      .then(data => { 
-      
-      Promise.all([Promise0,Promise1])
-        .then((values)=>{
-        console.log(values);
-      res.json({stockData: {
-        stock:  data['Global Quote']['01. symbol'],
-        price:  data['Global Quote']['05. price'],
-        likes:  values[1]
-      }
-      })
-      })  
-      })         
-      .catch(err => err.message);
     }
   
   })
